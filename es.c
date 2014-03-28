@@ -3,11 +3,11 @@
 
 #define X_TAG 0
 #define Y_TAG 1
-#define COUNT_TAG 2
+#define Z_TAG 2
+#define COUNT_TAG 3
 
 int main(int argc, char *argv[]) {
-    unsigned char XB;
-    unsigned char YB;
+    unsigned char XB, YB, ZB;
     unsigned char buffer;
     int numprocs,
         myid,
@@ -53,7 +53,6 @@ int main(int argc, char *argv[]) {
                 MPI_Send(&numbers[i], 1, MPI_INT, i + 1, X_TAG, MPI_COMM_WORLD);
                 MPI_Send(&numbers[i], 1, MPI_INT, 1, Y_TAG, MPI_COMM_WORLD);
             } else {
-
             }
         }
 
@@ -75,6 +74,10 @@ int main(int argc, char *argv[]) {
                 MPI_Send(&Y, 1, MPI_INT, myid + 1, Y_TAG, MPI_COMM_WORLD);
             }
         }
+
+        MPI_Send(&X, 1, MPI_INT, C, Z_TAG, MPI_COMM_WORLD);
+        MPI_Recv(&ZB, 1, MPI_INT, MPI_ANY_SOURCE, Z_TAG, MPI_COMM_WORLD, &stat);
+        Z = ZB;
 
         printf("Processor %d. Registers values: C=%d, X=%d, Y=%d, Z=%d.\n", myid, C, X, Y, Z);
     }
