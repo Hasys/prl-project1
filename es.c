@@ -48,13 +48,18 @@ int main(int argc, char *argv[]) {
             MPI_Send(&numprocs, 1, MPI_INT, i + 1, COUNT_TAG, MPI_COMM_WORLD);
         }
 
-        for (i = 0; i < numprocs; i += 1) {
-            MPI_Send(&numbers[i], 1, MPI_INT, i + 1, X_TAG, MPI_COMM_WORLD);
-            MPI_Send(&numbers[i], 1, MPI_INT, 1, Y_TAG, MPI_COMM_WORLD);
+        for (i = 0; i < 2 * numprocs; i += 1) {
+            if (i < numprocs) {
+                MPI_Send(&numbers[i], 1, MPI_INT, i + 1, X_TAG, MPI_COMM_WORLD);
+                MPI_Send(&numbers[i], 1, MPI_INT, 1, Y_TAG, MPI_COMM_WORLD);
+            } else {
+
+            }
         }
 
     } else {
-        int C = 1, X = -1, Y = -1, Z = -1, count = -1;
+        int C = 1, X = -1, Y = -1, Z = -1, 
+            count = -1;
 
         MPI_Recv(&buffer, 1, MPI_INT, 0, COUNT_TAG, MPI_COMM_WORLD, &stat);
         count = buffer;
@@ -62,11 +67,11 @@ int main(int argc, char *argv[]) {
         MPI_Recv(&XB, 1, MPI_INT, 0, X_TAG, MPI_COMM_WORLD, &stat);
         X = XB;
 
-        for (i = 0; i < count - myid + 1; i += 1) {
+        for (i = 0; i < count; i += 1) {
             MPI_Recv(&YB, 1, MPI_INT, myid - 1, Y_TAG, MPI_COMM_WORLD, &stat);
             Y = YB;
             C = (X > Y) ? (C + 1) : C;
-            if(myid < count) {
+            if (myid < count) {
                 MPI_Send(&Y, 1, MPI_INT, myid + 1, Y_TAG, MPI_COMM_WORLD);
             }
         }
