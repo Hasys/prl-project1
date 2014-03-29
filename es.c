@@ -5,10 +5,13 @@
 #define Y_TAG 1
 #define Z_TAG 2
 #define COUNT_TAG 3
+#define OUT_TAG 4
+
+int isExistsInArray(unsigned char, unsigned char *, int);
 
 int main(int argc, char *argv[]) {
-    unsigned char XB, YB, ZB;
-    unsigned char buffer;
+    unsigned char XB, YB, ZB, OB,
+                  buffer;
     int numprocs,
         myid,
         i,j;
@@ -21,8 +24,9 @@ int main(int argc, char *argv[]) {
 
     numprocs -= 1;
     if (myid == 0) {
-        char numbersTmp[numprocs],
-            numbers[numprocs];
+        unsigned char numbersTmp[numprocs],
+            numbers[numprocs],
+            numbersSorted[numprocs];
 
         FILE *fp = fopen("numbers", "r");
         fread(numbersTmp, 1, numprocs, fp);
@@ -33,27 +37,40 @@ int main(int argc, char *argv[]) {
         }
 
         for (i = 0; i < numprocs; i += 1) {
-            if (!isExistsInArray(numbersTmp[i], numbers)) {
+            if (!isExistsInArray(numbersTmp[i], numbers, numprocs)) {
                 numbers[i] = numbersTmp[i];
             } else {
-                while(isExistsInArray(numbersTmp[i], numbers)) {
+                while(isExistsInArray(numbersTmp[i], numbers, numprocs)) {
                     numbersTmp[i] += 1;
+                    if (numbersTmp[i] == 256) {
+                        numbersTmp[i] = 0;
+                    }
                 }
                 numbers[i] = numbersTmp[i];
             }
         }
 
-        printf("%d: We have %d processors\n", myid, (numprocs + 1));
+        for(i = 0; i < numprocs; i += 1) {
+            printf("%d ", numbers[i]);
+        }
+        printf("\n");
+
         for (i = 0; i < numprocs; i += 1) {
             MPI_Send(&numprocs, 1, MPI_INT, i + 1, COUNT_TAG, MPI_COMM_WORLD);
         }
 
-        for (i = 0; i < 2 * numprocs; i += 1) {
-            if (i < numprocs) {
-                MPI_Send(&numbers[i], 1, MPI_INT, i + 1, X_TAG, MPI_COMM_WORLD);
-                MPI_Send(&numbers[i], 1, MPI_INT, 1, Y_TAG, MPI_COMM_WORLD);
-            } else {
-            }
+        for (i = 0; i < numprocs; i += 1) {
+            MPI_Send(&numbers[i], 1, MPI_INT, i + 1, X_TAG, MPI_COMM_WORLD);
+            MPI_Send(&numbers[i], 1, MPI_INT, 1, Y_TAG, MPI_COMM_WORLD);
+        }
+
+        for(i = 0; i < numprocs; i += 1) {
+            MPI_Recv(&OB, 1, MPI_INT, numprocs, OUT_TAG, MPI_COMM_WORLD, &stat);
+            numbersSorted[numprocs - i - 1] = OB;
+        }
+
+        for(i = 0; i < numprocs; i+=1) {
+            printf("%d\n", numbersSorted[i]);
         }
 
     } else {
@@ -79,16 +96,23 @@ int main(int argc, char *argv[]) {
         MPI_Recv(&ZB, 1, MPI_INT, MPI_ANY_SOURCE, Z_TAG, MPI_COMM_WORLD, &stat);
         Z = ZB;
 
-        printf("Processor %d. Registers values: C=%d, X=%d, Y=%d, Z=%d.\n", myid, C, X, Y, Z);
+        int receiver = (myid == count) ? 0 : myid + 1;
+        
+        for (i = 1; i < myid; i += 1) {
+            MPI_Recv(&ZB, 1, MPI_INT, myid - 1, OUT_TAG, MPI_COMM_WORLD, &stat);
+            MPI_Send(&Z, 1, MPI_INT, receiver, OUT_TAG, MPI_COMM_WORLD);
+            Z = ZB;
+        }
+
+        MPI_Send(&Z, 1, MPI_INT, receiver, OUT_TAG, MPI_COMM_WORLD);
     }
 
     MPI_Finalize();
     return 0;
 }
 
-int isExistsInArray(int x, int array[]) {
-    int len = sizeof(array) / sizeof(int),
-        i;
+int isExistsInArray(unsigned char x, unsigned char array[], int len) {
+    int i;
     for (i = 0; i < len; i += 1) {
         if (array[i] == x) {
             return 1;
