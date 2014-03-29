@@ -1,5 +1,6 @@
 #include <mpi.h>
 #include <stdio.h>
+#include <sys/time.h>
 
 #define X_TAG 0
 #define Y_TAG 1
@@ -10,6 +11,7 @@
 int isExistsInArray(unsigned char, unsigned char *, int);
 
 int main(int argc, char *argv[]) {
+    struct timeval t_start, t_end;
     unsigned char XB, YB, ZB, OB,
                   buffer;
     int numprocs,
@@ -55,8 +57,9 @@ int main(int argc, char *argv[]) {
         }
         printf("\n");
 
-        for (i = 0; i < numprocs; i += 1) {
-            MPI_Send(&numprocs, 1, MPI_INT, i + 1, COUNT_TAG, MPI_COMM_WORLD);
+        gettimeofday(&t_start,NULL);
+        for (i = 1; i <= numprocs; i += 1) {
+            MPI_Send(&numprocs, 1, MPI_INT, i, COUNT_TAG, MPI_COMM_WORLD);
         }
 
         for (i = 0; i < numprocs; i += 1) {
@@ -64,15 +67,16 @@ int main(int argc, char *argv[]) {
             MPI_Send(&numbers[i], 1, MPI_INT, 1, Y_TAG, MPI_COMM_WORLD);
         }
 
-        for(i = 0; i < numprocs; i += 1) {
+        for(i = 1; i <= numprocs; i += 1) {
             MPI_Recv(&OB, 1, MPI_INT, numprocs, OUT_TAG, MPI_COMM_WORLD, &stat);
-            numbersSorted[numprocs - i - 1] = OB;
+            numbersSorted[numprocs - i] = OB;
         }
+        gettimeofday(&t_end,NULL);
 
         for(i = 0; i < numprocs; i+=1) {
             printf("%d\n", numbersSorted[i]);
         }
-
+        printf("Time of execution: %ld\n", (t_end.tv_usec - t_start.tv_usec) );
     } else {
         int C = 1, X = -1, Y = -1, Z = -1, 
             count = -1;
